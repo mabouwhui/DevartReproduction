@@ -1,0 +1,11 @@
+Reproduction path for malformed SQL when filtering on an ".count() {logical operator} {n}" boolean setter:
+- Open the solution DevartReproduction.sln in Visual Studio 2019
+- On an Oracle database: execute the script from the project in Database\Devart_repro_carmodel.sql
+- Open Startup.cs and fill in the valid connection string in line 30 ( ConfigureServices() )
+- Press run (F5) and wait for the default URL to open
+- add an oData filter that filters on the HasMoreThenOneModel property (this can also be reproduced by adding a linq filter on this property where we filter on HasMoreThenOneModel property): 
+	/DevartReproduction?$filter=HasMoreThenOneModel eq true
+Expected:
+- valid JSON with cars data from the database is returned where the filter has been applied- valid JSON with cars data from the database is returned where the filter has been applied (eg. only FORD is returned).
+Actual:
+- code breaks with exception about invalid SQL "ORA-00933: SQL command not properly ended"

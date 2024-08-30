@@ -1,0 +1,48 @@
+net8.0
+Devart.Data.Oracle.EFCore: 10.3.21.8
+Microsoft.EntityFrameworkCore: 8.0.8
+Microsoft.AspNetCore.OData: 8.2.5
+
+Title: Invalid SQL when filtering/ordering on a calculated boolean field: "ORA-00933: SQL command not properly ended"/"ORA-00920: invalid relational operator"
+
+Reproduction path for malformed SQL when ordering/filtering on a calculated boolean field:
+- Open the solution DevartReproduction.sln in Visual Studio 2022
+- On an Oracle database: execute the script from the project in Database\Devart_repro_carmodel.sql
+- Open Startup.cs and fill in the valid connection string in ConfigureServices() starting on line 30
+- Press run (F5) and wait for the default URL to open
+- add an oData orderby and filter on the IsLuxery property : 
+	/DevartReproduction?$filter=isluxery eq true &$orderby=isluxery
+Expected:
+- valid JSON with cars data from the database is returned where the filter and orderby have been applied.
+Actual:
+- code breaks with an exception about invalid SQL:
+  On filter: "ORA-00933: SQL command not properly ended"
+  On order by: "ORA-00920: invalid relational operator"
+
+Note:
+This is an example of the invalid SQL:
+SELECT "c".ID, "c".NAME "Brand", (CASE
+    WHEN (
+        SELECT COUNT(*)
+        FROM MODELS "m"
+        WHERE "m".CAR_ID = "c".ID) > 1 THEN 1
+    ELSE 0
+END) "HasMoreThenOneModel", (CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM MODELS "m0"
+        WHERE "m0".CAR_ID = "c".ID) THEN 1
+    ELSE 0
+END) "HasModels", (CASE
+    WHEN "c".LUXERYBRAND = 'J' THEN 1
+    ELSE 0
+END) "IsLuxery", 1 "isCar"
+FROM CARS "c"
+WHERE ("c".LUXERYBRAND = 'J' AND "c".LUXERYBRAND IS NOT NULL) = :p__TypedProperty_0
+ORDER BY CASE
+    WHEN CASE
+        WHEN "c".LUXERYBRAND = 'J' THEN 1
+        ELSE 0
+    END THEN 1
+    ELSE 0
+END
